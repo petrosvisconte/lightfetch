@@ -60,16 +60,22 @@ function main {
 	local b_white="\e[1;97m"
 
 	
-	### Configurable variables have been defined below
+	######## CUSTOMIZATION VARIABLES: MODIFY THE FOLLOWING SECTION #############
 	# Distro name settings
 	os_name_full="TRUE" # set to "TRUE" if you wish to display the full name
 	# Shell settings
 	shell_full="TRUE" # set to "TRUE" if you wish to display the full path
 	# Memory settings:
-	memory_units_type="M" # Set to "M" for MiB, set to "G" for GiB
 	memory_disp_units="TRUE" # set to "TRUE" if you wish to display the units
+	memory_units_type="G" # set to "M" for MB, set to "G" for GB, default units are kB (Note: kB=1024 bytes)
+	memory_units_scaling="2" # sets number of digits after decimal point (only relevant for GB unit type)
 	# CPU settings
 	cpu_brand="TRUE" # set to TRUE if you wish to display CPU brand name
+	cpu_disp_units="TRUE" # set to "TRUE" if you wish to display the units
+	cpu_units_type="G" # set to "G" for GHz, default units are in MHz (set to anything other than "G" for MHz)
+	cpu_units_scaling="1" # sets number of digits after decimal point (only relevant for GHz unit type)
+
+	##################### END OF CUSTOMIZATION VARIABLES #######################
 
 
 	### Display variables have been defined below
@@ -93,8 +99,9 @@ function main {
 	local memory=$(Memory)
 	# cpu model name
 	local cpu_model=$(CPU_Model)
+	# cpu information:
+	local cpu_speed=$(CPU_Speed) 
 	 
-
 
 	########### OUTPUT: MODIFY THE FOLLOWING SECTION ###############
 	echo ""
@@ -106,7 +113,7 @@ function main {
 	printf "        ${b_blue}Shell   ${default}: ${shell}\n"
 	printf "        ${b_blue}Uptime  ${default}: ${uptime_d} days, ${uptime_h} hours, ${uptime_m} mins\n"
 	printf "        ${b_blue}Memory  ${default}: ${memory}\n"
-	printf "        ${b_blue}CPU     ${default}: ${cpu_model}\n"
+	printf "        ${b_blue}CPU     ${default}: ${cpu_model} ${cpu_speed}\n"
 	echo -e "   ${default}-----------------------------------------"
 	echo ""
 	##################### END OF OUTPUT ############################
@@ -136,22 +143,23 @@ function OS_Name {
 function Kernel {
 	local kern=
 	read -r _ _ kern _ < /proc/version
-	printf "%s" "$kern"
+	printf "$kern"
 }
 
 function Desktop {
-  if [ "$DESKTOP_SESSION" != "" ]; then
-    printf "%s\n" "$DESKTOP_SESSION"
-  elif [ "$XDG_CURRENT_DESKTOP" != "" ]; then
-    printf "%s\n" "$XDG_CURRENT_DESKTOP"
-  else
-    for i in /proc/*/comm; do
-      read -r p < "$i"
-      case "$p" in
-        awesome|xmonad*|qtile|sway|i3|[bfo]*box|*wm*) printf "%s" "${p%%-*}"; break;;
-      esac
-    done
-  fi
+	if [ "${DESKTOP_SESSION}" != "" ]; then
+	printf "${DESKTOP_SESSION}"
+	elif [ "${XDG_CURRENT_DESKTOP}" != "" ]; then
+	printf "${XDG_CURRENT_DESKTOP}"
+	else
+	for i in /proc/*/comm; do
+		local p=
+		read -r p < "$i"
+		case "$p" in
+		awesome|xmonad*|qtile|sway|i3|[bfo]*box|*wm*) printf "${p%%-*}"; break;;
+		esac
+	done
+	fi
 }
 
 function Shell {
@@ -206,19 +214,28 @@ function Memory {
         	;;
     	esac
   	done < /proc/meminfo
-  	
-	mem_used="$(( mem_used / 1024 ))"
-  	mem_total="$(( mem_total / 1024 ))"
 	
 	if [ "${memory_units_type}" == "M" ]; then
+		mem_used="$(( mem_used / 1024 ))"
+  		mem_total="$(( mem_total / 1024 ))"
 		if [ "${memory_disp_units}" == "TRUE" ]; then
-			printf "${mem_used}MiB / ${mem_total}MiB"
+			printf "${mem_used}MB / ${mem_total}MB"
 		else 
 			printf "${mem_used} / ${mem_total}"
 		fi
 	elif [ "${memory_units_type}" == "G" ]; then
+		mem_used=$(echo "scale = ${memory_units_scaling}; $mem_used / 1048576" | bc)
+  		mem_total=$(echo "scale = ${memory_units_scaling}; $mem_total / 1048576" | bc )
 		if [ "${memory_disp_units}" == "TRUE" ]; then
-			printf "${mem_used}GiB / ${mem_total}GiB"
+			printf "${mem_used}GB / ${mem_total}GB"
+		else 
+			printf "${mem_used} / ${mem_total}"
+		fi
+	else 
+		mem_used="${mem_used// /}"
+		mem_total="${mem_total// /}"
+		if [ "${memory_disp_units}" == "TRUE" ]; then
+			printf "${mem_used}kB / ${mem_total}kB"
 		else 
 			printf "${mem_used} / ${mem_total}"
 		fi
@@ -226,7 +243,7 @@ function Memory {
 }
 
 function CPU_Model {
-	cpu=$(cat /proc/cpuinfo | grep -m 1 "model name")
+	local cpu=$(cat /proc/cpuinfo | grep -m 1 "model name")
 	cpu="${cpu%\@*}"
 	cpu="${cpu#*\:}"
 	# Remove un-needed patterns from cpu output.
@@ -254,14 +271,71 @@ function CPU_Model {
 	shopt -s extglob
 	cpu="${cpu##+([[:space:]])}"
 	cpu="${cpu%%+([[:space:]])}"
-	cpu_n="${cpu#*\ }"		
+	local cpu_n="${cpu#*\ }"		
 	cpu_n="${cpu_n##+([[:space:]])}"
-	cpu_b=$(echo $cpu)
+	local cpu_b=$(echo $cpu)
     if [ "$cpu_brand" == "TRUE" ]; then
 		printf "${cpu_b}"
 	else
 		printf "${cpu_n}"
     fi
+	
+	# Get CPU cores.
+	case $cpu_cores in
+		"logical" | "on") cores="$(grep -c "^processor" "$cpu_file")" ;;
+		"physical") cores="$(awk '/^core id/&&!a[$0]++{++i} END {print i}' "$cpu_file")" ;;
+	esac
+}
+
+function CPU_Speed {
+	local speed_dir="/sys/devices/system/cpu/cpu0/cpufreq"
+	local speed=
+	# Get CPU speed.
+	if [ -d "$speed_dir" ]; then
+		if [ -f "${speed_dir}/bios_limit" ]; then 
+			speed="$(cat "${speed_dir}/bios_limit")"
+		elif [ -f "${speed_dir}"/scaling_max_freq ]; then
+			speed="$(cat "${speed_dir}/scaling_max_freq")"
+		else
+			speed="$(cat "${speed_dir}/cpuinfo_max_freq")"
+		fi
+		speed="$((speed / 1000))"
+	else
+		speed="$(cat /proc/cpuinfo | grep -m 1 "cpu MHz")"
+		speed="${speed#*:}"
+		speed="${speed%.*}"
+		speed="${speed// /}"
+
+	fi
+	# Print speed as GHz or MHz dependng on cpu_units_type
+	if [ "${cpu_units_type}" == "G" ]; then
+		speed=$(echo "scale = ${cpu_units_scaling}; $speed / 1000" | bc)
+		if [ "${cpu_disp_units}" == "TRUE" ]; then
+			printf "${speed}GHz"
+		else 
+			printf "${speed}"
+		fi
+	else 
+		if [ "${cpu_disp_units}" == "TRUE" ]; then
+			printf "${speed}MHz"
+		else 
+			printf "${speed}"
+		fi
+	fi
+}
+
+function CPU_Temp {
+	# Select the right temperature file.
+	for temp_dir in /sys/class/hwmon/*; do
+		[[ "$(< "${temp_dir}/name")" =~ (coretemp|fam15h_power|k10temp) ]] && {
+			temp_dirs=("$temp_dir"/temp*_input)
+			temp_dir=${temp_dirs[0]}
+			break
+		}
+	done
+
+	# Get CPU temp.
+	[[ -f "$temp_dir" ]] && deg="$(($(< "$temp_dir") * 100 / 10000))"
 }
 
 function Help { 
