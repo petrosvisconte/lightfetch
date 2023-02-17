@@ -247,39 +247,39 @@ function CPU_Model {
 	cpu="${cpu%\@*}"
 	cpu="${cpu#*\:}"
 	# Remove un-needed patterns from cpu output.
-    cpu="${cpu//(TM)}"
-    cpu="${cpu//(tm)}"
-    cpu="${cpu//(R)}"
-    cpu="${cpu//(r)}"
-    cpu="${cpu//CPU}"
-    cpu="${cpu//Processor}"
-    cpu="${cpu//Dual-Core}"
-    cpu="${cpu//Quad-Core}"
-    cpu="${cpu//Six-Core}"
-    cpu="${cpu//Eight-Core}"
-    cpu="${cpu//[1-9][0-9]-Core}"
-    cpu="${cpu//[0-9]-Core}"
-    cpu="${cpu//, * Compute Cores}"
-    cpu="${cpu//Core / }"
-    cpu="${cpu//(\"AuthenticAMD\"*)}"
-    cpu="${cpu//with Radeon * Graphics}"
-    cpu="${cpu//, altivec supported}"
-    cpu="${cpu//FPU*}"
-    cpu="${cpu//Chip Revision*}"
-    cpu="${cpu//Technologies, Inc}"
-    cpu="${cpu//Core2/Core 2}"
+	cpu="${cpu//(TM)}"
+	cpu="${cpu//(tm)}"
+	cpu="${cpu//(R)}"
+	cpu="${cpu//(r)}"
+	cpu="${cpu//CPU}"
+	cpu="${cpu//Processor}"
+	cpu="${cpu//Dual-Core}"
+	cpu="${cpu//Quad-Core}"
+	cpu="${cpu//Six-Core}"
+	cpu="${cpu//Eight-Core}"
+	cpu="${cpu//[1-9][0-9]-Core}"
+	cpu="${cpu//[0-9]-Core}"
+	cpu="${cpu//, * Compute Cores}"
+	cpu="${cpu//Core / }"
+	cpu="${cpu//(\"AuthenticAMD\"*)}"
+	cpu="${cpu//with Radeon * Graphics}"
+	cpu="${cpu//, altivec supported}"
+	cpu="${cpu//FPU*}"
+	cpu="${cpu//Chip Revision*}"
+	cpu="${cpu//Technologies, Inc}"
+	cpu="${cpu//Core2/Core 2}"
 	shopt -s extglob
 	cpu="${cpu##+([[:space:]])}"
 	cpu="${cpu%%+([[:space:]])}"
 	local cpu_n="${cpu#*\ }"		
 	cpu_n="${cpu_n##+([[:space:]])}"
 	local cpu_b=$(echo $cpu)
-    if [ "$cpu_brand" == "TRUE" ]; then
+	if [ "$cpu_brand" == "TRUE" ]; then
 		printf "${cpu_b}"
 	else
 		printf "${cpu_n}"
-    fi
-	
+	fi
+
 	# Get CPU cores.
 	case $cpu_cores in
 		"logical" | "on") cores="$(grep -c "^processor" "$cpu_file")" ;;
