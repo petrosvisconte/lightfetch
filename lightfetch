@@ -72,8 +72,9 @@ function main {
 	# CPU settings
 	cpu_brand="TRUE" # set to TRUE if you wish to display CPU brand name
 	cpu_disp_units="TRUE" # set to "TRUE" if you wish to display the units
-	cpu_units_type="G" # set to "G" for GHz, default units are in MHz (set to anything other than "G" for MHz)
+	cpu_units_type="G" # set to "G" for GHz, default units are in MHz
 	cpu_units_scaling="1" # sets number of digits after decimal point (only relevant for GHz unit type)
+	cpu_core_count="" # set to "L" to display logical cores, default is physical cores
 
 	##################### END OF CUSTOMIZATION VARIABLES #######################
 
@@ -101,7 +102,8 @@ function main {
 	local cpu_model=$(CPU_Model)
 	# cpu information:
 	local cpu_speed=$(CPU_Speed) 
-	 
+	local cpu_cores=$(CPU_Cores)
+	local cpu_temp=$(CPU_Temp)
 
 	########### OUTPUT: MODIFY THE FOLLOWING SECTION ###############
 	echo ""
@@ -113,7 +115,7 @@ function main {
 	printf "        ${b_blue}Shell   ${default}: ${shell}\n"
 	printf "        ${b_blue}Uptime  ${default}: ${uptime_d} days, ${uptime_h} hours, ${uptime_m} mins\n"
 	printf "        ${b_blue}Memory  ${default}: ${memory}\n"
-	printf "        ${b_blue}CPU     ${default}: ${cpu_model} ${cpu_speed}\n"
+	printf "        ${b_blue}CPU     ${default}: ${cpu_model} (${cpu_cores}) ${cpu_speed} ${cpu_temp}\n"
 	echo -e "   ${default}-----------------------------------------"
 	echo ""
 	##################### END OF OUTPUT ############################
@@ -126,14 +128,14 @@ function Title {
 
 function OS_Name {
 	if [ "${os_name_full}" == "TRUE" ]; then
-		local os_name=$(cat /etc/os-release | grep "\<PRETTY_NAME\>")
+		local os_name=$(grep "\<PRETTY_NAME\>" /etc/os-release)
 		if [ "${os_name}" ]; then
 			os_name="${os_name%\"*}"
 			os_name="${os_name#*\"}"
 			printf "${os_name}"
 		fi
 	else 
-		local os_name=$(cat /etc/os-release | grep "\<NAME\>")
+		local os_name=$(grep "\<NAME\>" /etc/os-release)
 		os_name="${os_name%\"*}"
 		os_name="${os_name#*\"}"
 		printf "${os_name}"
@@ -243,7 +245,7 @@ function Memory {
 }
 
 function CPU_Model {
-	local cpu=$(cat /proc/cpuinfo | grep -m 1 "model name")
+	local cpu=$(grep -m 1 "model name" /proc/cpuinfo)
 	cpu="${cpu%\@*}"
 	cpu="${cpu#*\:}"
 	# Remove un-needed patterns from cpu output.
@@ -279,12 +281,6 @@ function CPU_Model {
 	else
 		printf "${cpu_n}"
 	fi
-
-	# Get CPU cores.
-	case $cpu_cores in
-		"logical" | "on") cores="$(grep -c "^processor" "$cpu_file")" ;;
-		"physical") cores="$(awk '/^core id/&&!a[$0]++{++i} END {print i}' "$cpu_file")" ;;
-	esac
 }
 
 function CPU_Speed {
@@ -293,15 +289,15 @@ function CPU_Speed {
 	# Get CPU speed.
 	if [ -d "$speed_dir" ]; then
 		if [ -f "${speed_dir}/bios_limit" ]; then 
-			speed="$(cat "${speed_dir}/bios_limit")"
+			speed=$(cat "${speed_dir}/bios_limit")
 		elif [ -f "${speed_dir}"/scaling_max_freq ]; then
-			speed="$(cat "${speed_dir}/scaling_max_freq")"
+			speed=$(cat "${speed_dir}/scaling_max_freq")
 		else
-			speed="$(cat "${speed_dir}/cpuinfo_max_freq")"
+			speed=$(cat "${speed_dir}/cpuinfo_max_freq")
 		fi
-		speed="$((speed / 1000))"
+		speed=$((speed / 1000))
 	else
-		speed="$(cat /proc/cpuinfo | grep -m 1 "cpu MHz")"
+		speed=$(grep -m 1 "cpu MHz" /proc/cpuinfo)
 		speed="${speed#*:}"
 		speed="${speed%.*}"
 		speed="${speed// /}"
@@ -324,6 +320,21 @@ function CPU_Speed {
 	fi
 }
 
+function CPU_Cores {
+	# Get CPU cores.
+	local core_count=
+	if [ "${cpu_core_count}" == "L" ]; then
+		core_count=$(grep -c processor /proc/cpuinfo)
+		printf "${core_count}"
+	else
+		core_count=$(grep "core id" /proc/cpuinfo | tail -1) 
+		core_count="${core_count#*:}"
+		core_count="${core_count// /}"
+		core_count=$((core_count + 1))
+		printf "${core_count}"
+	fi
+}
+
 function CPU_Temp {
 	# Select the right temperature file.
 	for temp_dir in /sys/class/hwmon/*; do
@@ -335,7 +346,8 @@ function CPU_Temp {
 	done
 
 	# Get CPU temp.
-	[[ -f "$temp_dir" ]] && deg="$(($(< "$temp_dir") * 100 / 10000))"
+	[[ -f "$temp_dir" ]] && deg=$(echo "scale = 1; $(< "$temp_dir") / 1000" | bc)
+	printf "${deg}°"
 }
 
 function Help { 
