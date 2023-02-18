@@ -1,5 +1,5 @@
 # lightfetch
-A lightweight system information fetcher for Linux  
+A lightweight system information fetcher for Linux. Written in bash.
 
 Requires:
 - bc (for floating point arithmetic)
