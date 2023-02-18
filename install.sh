@@ -18,7 +18,7 @@ input=
 until [ "${input}" == "y" ] || [ "${input}" == "n" ]; do
     read -p "Create a "${HOME}"/.config/lightfetch directory? [y/n]: " input    
     if [ "${input}" == "y" ]; then
-        mkdir -v "${HOME}"/.config/lightfetch2
+        mkdir -v "${HOME}"/.config/lightfetch
         # copy themes to .config
         echo "> Installation complete. Try entering: lightfetch"
     elif [ "${input}" == "n" ]; then
