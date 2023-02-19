@@ -62,19 +62,19 @@ function main {
 	
 	######## CUSTOMIZATION VARIABLES: MODIFY THE FOLLOWING SECTION #############
 	# Distro name settings
-	os_name_full="TRUE" # set to "TRUE" if you wish to display the full name
+	os_name_full="TRU" # set to "TRUE" if you wish to display the full name
 	# Shell settings
 	shell_full="TRUE" # set to "TRUE" if you wish to display the full path
 	# Memory settings:
 	memory_disp_units="TRUE" # set to "TRUE" if you wish to display the units
-	memory_units_type="G" # set to "M" for MB, set to "G" for GB, default units are kB (Note: kB=1024 bytes)
+	memory_units_type="M" # set to "M" for MB, set to "G" for GB, default units are kB (Note: kB=1024 bytes)
 	memory_units_scaling="2" # sets number of digits after decimal point (only relevant for GB unit type)
 	# CPU settings
-	cpu_brand="TRUE" # set to TRUE if you wish to display CPU brand name
+	cpu_brand="TRU" # set to TRUE if you wish to display CPU brand name
 	cpu_disp_units="TRUE" # set to "TRUE" if you wish to display the units
 	cpu_units_type="G" # set to "G" for GHz, default units are in MHz
 	cpu_units_scaling="1" # sets number of digits after decimal point (only relevant for GHz unit type)
-	cpu_core_count="" # set to "L" to display logical cores, default is physical cores
+	cpu_core_count="L" # set to "L" to display logical cores, default is physical cores
 
 	##################### END OF CUSTOMIZATION VARIABLES #######################
 
@@ -275,11 +275,19 @@ function CPU_Model {
 	cpu="${cpu%%+([[:space:]])}"
 	local cpu_n="${cpu#*\ }"		
 	cpu_n="${cpu_n##+([[:space:]])}"
+	local cpu_e="${cpu_n#*\ }"
+	cpu_e="${cpu_e// /}"
+	cpu_n="${cpu_n%\ *}"
+	cpu_n="${cpu_n// /}"
 	local cpu_b=$(echo $cpu)
 	if [ "$cpu_brand" == "TRUE" ]; then
 		printf "${cpu_b}"
 	else
-		printf "${cpu_n}"
+		if [ "${cpu_n}" == "${cpu_e}" ]; then
+			printf "${cpu_n}"
+		else
+			printf "${cpu_n} ${cpu_e}"
+		fi
 	fi
 }
 
