@@ -62,7 +62,7 @@ function main {
 	
 	######## CUSTOMIZATION VARIABLES: MODIFY THE FOLLOWING SECTION #############
 	# Distro name settings
-	os_name_full="TRU" # set to "TRUE" if you wish to display the full name
+	os_name_full="TRUE" # set to "TRUE" if you wish to display the full name
 	# Shell settings
 	shell_full="TRUE" # set to "TRUE" if you wish to display the full path
 	# Memory settings:
@@ -70,7 +70,7 @@ function main {
 	memory_units_type="M" # set to "M" for MB, set to "G" for GB, default units are kB (Note: kB=1024 bytes)
 	memory_units_scaling="2" # sets number of digits after decimal point (only relevant for GB unit type)
 	# CPU settings
-	cpu_brand="TRU" # set to TRUE if you wish to display CPU brand name
+	cpu_brand="TRUE" # set to TRUE if you wish to display CPU brand name
 	cpu_disp_units="TRUE" # set to "TRUE" if you wish to display the units
 	cpu_units_type="G" # set to "G" for GHz, default units are in MHz
 	cpu_units_scaling="1" # sets number of digits after decimal point (only relevant for GHz unit type)
