@@ -67,13 +67,12 @@ function main {
 	shell_full="TRUE" # set to "TRUE" if you wish to display the full path
 	# Memory settings:
 	memory_disp_units="TRUE" # set to "TRUE" if you wish to display the units
-	memory_units_type="M" # set to "M" for MB, set to "G" for GB, default units are kB (Note: kB=1024 bytes)
-	memory_units_scaling="2" # sets number of digits after decimal point (only relevant for GB unit type)
+	memory_units_type="G" # set to "M" for MB, set to "G" for GB, default units are kB (Note: kB=1024 bytes)
 	# CPU settings
 	cpu_brand="TRUE" # set to TRUE if you wish to display CPU brand name
 	cpu_disp_units="TRUE" # set to "TRUE" if you wish to display the units
 	cpu_units_type="G" # set to "G" for GHz, default units are in MHz
-	cpu_units_scaling="1" # sets number of digits after decimal point (only relevant for GHz unit type)
+	cpu_units_scaling="2" # sets number of digits after decimal point (only relevant for GHz unit type)
 	cpu_core_count="L" # set to "L" to display logical cores, default is physical cores
 
 	##################### END OF CUSTOMIZATION VARIABLES #######################
@@ -226,8 +225,19 @@ function Memory {
 			printf "${mem_used} / ${mem_total}"
 		fi
 	elif [ "${memory_units_type}" == "G" ]; then
-		mem_used=$(echo "scale = ${memory_units_scaling}; $mem_used / 1048576" | bc)
-  		mem_total=$(echo "scale = ${memory_units_scaling}; $mem_total / 1048576" | bc )
+		local i="${mem_used}"
+		local d=
+		while ((i > 1024)); do
+			printf -v d ".%02d" $((i % 1024 * 100 / 1024))
+			i=$((i / 1024))
+		done
+		mem_used=$(printf "${i// /}${d}")
+		i="${mem_total}"
+		while ((i > 1024)); do
+			printf -v d ".%02d" $((i % 1024 * 100 / 1024))
+			i=$((i / 1024))
+		done
+		mem_total=$(printf "${i// /}${d}")
 		if [ "${memory_disp_units}" == "TRUE" ]; then
 			printf "${mem_used}GB / ${mem_total}GB"
 		else 
@@ -313,7 +323,7 @@ function CPU_Speed {
 	fi
 	# Print speed as GHz or MHz dependng on cpu_units_type
 	if [ "${cpu_units_type}" == "G" ]; then
-		speed=$(echo "scale = ${cpu_units_scaling}; $speed / 1000" | bc)
+		speed=$(printf %.${cpu_units_scaling}f "$((10**3 * speed/1000))e-3")
 		if [ "${cpu_disp_units}" == "TRUE" ]; then
 			printf "${speed}GHz"
 		else 
@@ -354,7 +364,8 @@ function CPU_Temp {
 	done
 
 	# Get CPU temp.
-	[[ -f "$temp_dir" ]] && deg=$(echo "scale = 1; $(< "$temp_dir") / 1000" | bc)
+	[[ -f "$temp_dir" ]] && deg=$(echo $(< "$temp_dir"))
+	deg=$(printf %.1f "$((10**2 * deg/1000))e-2")
 	printf "${deg}°"
 }
 
