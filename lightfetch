@@ -225,19 +225,22 @@ function Memory {
 			printf "${mem_used} / ${mem_total}"
 		fi
 	elif [ "${memory_units_type}" == "G" ]; then
-		local i="${mem_used}"
+		local i="${mem_total}"
 		local d=
+		local c=0
 		while ((i > 1024)); do
 			printf -v d ".%02d" $((i % 1024 * 100 / 1024))
 			i=$((i / 1024))
-		done
-		mem_used=$(printf "${i// /}${d}")
-		i="${mem_total}"
-		while ((i > 1024)); do
-			printf -v d ".%02d" $((i % 1024 * 100 / 1024))
-			i=$((i / 1024))
+			c=$((c + 1))
 		done
 		mem_total=$(printf "${i// /}${d}")
+		i="${mem_used}"
+		while ((c > 0)); do
+			printf -v d ".%02d" $((i % 1024 * 100 / 1024))
+			i=$((i / 1024))
+			c=$((c - 1))
+		done
+		mem_used=$(printf "${i// /}${d}")
 		if [ "${memory_disp_units}" == "TRUE" ]; then
 			printf "${mem_used}GB / ${mem_total}GB"
 		else 
