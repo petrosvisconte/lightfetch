@@ -257,6 +257,14 @@ function Memory {
 	fi
 }
 
+function CPU_Count {
+	local processor_count=$(grep "physical id" /proc/cpuinfo | tail -1)
+	processor_count="${processor_count#*:}"
+	processor_count="${processor_count// /}"
+	processor_count=$((processor_count + 1))
+	printf "${processor_count}"
+}
+
 function CPU_Model {
 	local cpu=$(grep -m 1 "model name" /proc/cpuinfo)
 	cpu="${cpu%\@*}"
@@ -348,10 +356,14 @@ function CPU_Cores {
 		core_count=$(grep -c processor /proc/cpuinfo)
 		printf "${core_count}"
 	else
+		local cpu_count=$(CPU_Count)
 		core_count=$(grep "core id" /proc/cpuinfo | tail -1) 
 		core_count="${core_count#*:}"
 		core_count="${core_count// /}"
 		core_count=$((core_count + 1))
+		if [ "${cpu_count}" -gt "1" ]; then
+			core_count=$((core_count * 2))
+		fi
 		printf "${core_count}"
 	fi
 }
